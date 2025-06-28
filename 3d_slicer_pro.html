@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<!--created by Tomer Shotland for http://www.3dgarage.tech-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Slicer Pro - Online STL to G-code</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viewer-area {
+            flex: 1;
+            position: relative;
+            background: #1a1a2e;
+        }
+
+        .status-bar {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        h1 {
+            color: #4facfe;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            text-align: center;
+        }
+
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #4facfe;
+        }
+
+        .file-upload {
+            border: 3px dashed #4facfe;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #f8fbff 0%, #e8f4fd 100%);
+        }
+
+        .file-upload:hover {
+            border-color: #00f2fe;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.2);
+        }
+
+        .file-upload.dragover {
+            border-color: #00f2fe;
+            background: linear-gradient(135deg, #e8f4fd 0%, #d1ebfa 100%);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .setting-group input, .setting-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .setting-group input:focus, .setting-group select:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 233, 123, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .progress-container {
+            margin: 15px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d9ff;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toolbar-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .toolbar-btn:hover {
+            background: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .toolbar-btn.active {
+            background: #4facfe;
+            color: white;
+        }
+
+        #viewer3d {
+            width: 100%;
+            height: 100%;
+        }
+
+        .model-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            min-width: 200px;
+            display: none;
+        }
+
+        .model-info h4 {
+            margin-bottom: 10px;
+            color: #4facfe;
+        }
+
+        .model-info div {
+            margin-bottom: 5px;
+        }
+
+        .layer-preview {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .layer-slider {
+            width: 200px;
+            margin: 10px 0;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .preset-btn {
+            padding: 8px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .preset-btn.active {
+            border-color: #4facfe;
+            background: #4facfe;
+            color: white;
+        }
+
+        .setting-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            border-bottom-color: #4facfe;
+            color: #4facfe;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .advanced-settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .log-area {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 3px 0;
+        }
+
+        .log-entry.info { color: #0066cc; }
+        .log-entry.success { color: #28a745; }
+        .log-entry.warning { color: #ffc107; }
+        .log-entry.error { color: #dc3545; }
+
+        .demo-models {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .demo-btn {
+            padding: 8px 12px;
+            background: #f0f8ff;
+            border: 1px solid #4facfe;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+
+        .demo-btn:hover {
+            background: #4facfe;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 40vh;
+            }
+            
+            .advanced-settings {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <h1>🔧 3D Slicer Pro</h1>
+            
+            <!-- File Upload Section -->
+            <div class="section">
+                <h3>📁 File Upload</h3>
+                <div class="file-upload" id="fileUpload">
+                    <input type="file" id="fileInput" class="file-input" accept=".stl,.obj,.3mf,.gcode,.g" multiple>
+                    <div>
+                        <div style="font-size: 2em; margin-bottom: 10px;">📎</div>
+                        <div><strong>Click or drag files here</strong></div>
+                        <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                            Supports STL, OBJ, 3MF, G-code files
+                        </div>
+                    </div>
+                </div>
+                <div class="demo-models">
+                    <button class="demo-btn" data-shape="cube">Load Cube</button>
+                    <button class="demo-btn" data-shape="sphere">Load Sphere</button>
+                    <button class="demo-btn" data-shape="cylinder">Load Cylinder</button>
+                    <button class="demo-btn" data-shape="torus">Load Torus</button>
+                </div>
+                <div style="margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 11px; color: #666;">
+                    💡 <strong>Tip:</strong> Upload STL/OBJ files to slice, or upload G-code files to visualize existing toolpaths
+                </div>
+                <div id="fileInfo"></div>
+            </div>
+
+            <!-- Print Settings -->
+            <div class="section">
+                <h3>⚙️ Print Settings</h3>
+                
+                <!-- Preset Buttons -->
+                <div class="preset-buttons">
+                    <div class="preset-btn" data-preset="draft">🚀 Draft</div>
+                    <div class="preset-btn active" data-preset="normal">⚡ Normal</div>
+                    <div class="preset-btn" data-preset="fine">✨ Fine</div>
+                    <div class="preset-btn" data-preset="custom">🔧 Custom</div>
+                </div>
+
+                <!-- Setting Tabs -->
+                <div class="setting-tabs">
+                    <button class="tab-btn active" data-tab="basic">Basic</button>
+                    <button class="tab-btn" data-tab="advanced">Advanced</button>
+                    <button class="tab-btn" data-tab="material">Material</button>
+                </div>
+
+                <!-- Basic Settings -->
+                <div class="tab-content active" id="basic">
+                    <div class="setting-group">
+                        <label for="layerHeight">Layer Height (mm)</label>
+                        <input type="number" id="layerHeight" value="0.2" min="0.05" max="1.0" step="0.05">
+                    </div>
+                    <div class="setting-group">
+                        <label for="infillDensity">Infill Density (%)</label>
+                        <input type="number" id="infillDensity" value="20" min="0" max="100" step="5">
+                    </div>
+                    <div class="setting-group">
+                        <label for="printSpeed">Print Speed (mm/s)</label>
+                        <input type="number" id="printSpeed" value="60" min="10" max="150" step="5">
+                    </div>
+                    <div class="setting-group">
+                        <label for="infillPattern">Infill Pattern</label>
+                        <select id="infillPattern">
+                            <option value="grid">Grid</option>
+                            <option value="lines">Lines</option>
+                            <option value="triangular">Triangular</option>
+                            <option value="honeycomb">Honeycomb</option>
+                            <option value="gyroid">Gyroid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="tab-content" id="advanced">
+                    <div class="advanced-settings">
+                        <div class="setting-group">
+                            <label for="wallThickness">Wall Thickness (mm)</label>
+                            <input type="number" id="wallThickness" value="1.2" min="0.4" max="5" step="0.1">
+                        </div>
+                        <div class="setting-group">
+                            <label for="topBottomLayers">Top/Bottom Layers</label>
+                            <input type="number" id="topBottomLayers" value="3" min="1" max="10" step="1">
+                        </div>
+                        <div class="setting-group">
+                            <label for="supportEnabled">Enable Supports</label>
+                            <select id="supportEnabled">
+                                <option value="false">Disabled</option>
+                                <option value="true">Enabled</option>
+                                <option value="touching">Touching Buildplate</option>
+                            </select>
+                        </div>
+                        <div class="setting-group">
+                            <label for="supportDensity">Support Density (%)</label>
+                            <input type="number" id="supportDensity" value="15" min="5" max="50" step="5">
+                        </div>
+                        <div class="setting-group">
+                            <label for="retraction">Retraction (mm)</label>
+                            <input type="number" id="retraction" value="4.5" min="0" max="10" step="0.1">
+                        </div>
+                        <div class="setting-group">
+                            <label for="travelSpeed">Travel Speed (mm/s)</label>
+                            <input type="number" id="travelSpeed" value="120" min="50" max="300" step="10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Material Settings -->
+                <div class="tab-content" id="material">
+                    <div class="setting-group">
+                        <label for="material">Material</label>
+                        <select id="material">
+                            <option value="pla">PLA</option>
+                            <option value="abs">ABS</option>
+                            <option value="petg">PETG</option>
+                            <option value="tpu">TPU</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="nozzleTemp">Nozzle Temperature (°C)</label>
+                        <input type="number" id="nozzleTemp" value="200" min="150" max="300" step="5">
+                    </div>
+                    <div class="setting-group">
+                        <label for="bedTemp">Bed Temperature (°C)</label>
+                        <input type="number" id="bedTemp" value="60" min="0" max="120" step="5">
+                    </div>
+                    <div class="setting-group">
+                        <label for="fanSpeed">Fan Speed (%)</label>
+                        <input type="number" id="fanSpeed" value="100" min="0" max="100" step="5">
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" id="sliceBtn" disabled style="width: 100%; margin-bottom: 10px;">
+                        🚀 Slice Model
+                    </button>
+                    <button class="btn btn-success" id="downloadBtn" disabled style="width: 100%;">
+                        💾 Download G-code
+                    </button>
+                </div>
+
+                <!-- Progress -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Processing...</div>
+                </div>
+
+                <!-- Log Area -->
+                <div class="log-area" id="logArea"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <button class="toolbar-btn active" id="viewSolid">🧊 Solid</button>
+                    <button class="toolbar-btn" id="viewWireframe">📐 Wireframe</button>
+                    <button class="toolbar-btn" id="viewLayers">📄 Layers</button>
+                    <button class="toolbar-btn" id="viewGcode">🛣️ G-code</button>
+                    <button class="toolbar-btn" id="viewSupports">🏗️ Supports</button>
+                </div>
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" id="resetView">🎯 Reset View</button>
+                    <button class="toolbar-btn" id="fitView">📏 Fit to View</button>
+                    <button class="toolbar-btn" id="toggleAxes">⚡ Axes</button>
+                </div>
+            </div>
+
+            <!-- 3D Viewer -->
+            <div class="viewer-area">
+                <div id="viewer3d"></div>
+                
+                <!-- Model Info Panel -->
+                <div class="model-info" id="modelInfo">
+                    <h4>Model Information</h4>
+                    <div>Vertices: <span id="vertexCount">0</span></div>
+                    <div>Faces: <span id="faceCount">0</span></div>
+                    <div>Size: <span id="modelSize">0×0×0 mm</span></div>
+                    <div>Volume: <span id="modelVolume">0 cm³</span></div>
+                    <div>Estimated Print Time: <span id="printTime">--</span></div>
+                    <div>Material Usage: <span id="materialUsage">-- g</span></div>
+                </div>
+
+                <!-- Layer Preview -->
+                <div class="layer-preview" id="layerPreview">
+                    <h4>Layer Preview</h4>
+                    <div>Layer: <span id="currentLayer">0</span> / <span id="totalLayers">0</span></div>
+                    <input type="range" class="layer-slider" id="layerSlider" min="0" max="0" value="0">
+                    <div>Height: <span id="layerHeight">0.00</span> mm</div>
+                </div>
+
+                <!-- G-code Viewer Controls -->
+                <div class="layer-preview" id="gcodeViewer" style="display: none;">
+                    <h4>G-code Viewer</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button class="toolbar-btn" id="playGcode">▶️ Play</button>
+                        <button class="toolbar-btn" id="pauseGcode">⏸️ Pause</button>
+                        <button class="toolbar-btn" id="resetGcode">⏹️ Reset</button>
+                    </div>
+                    <div>Layer: <span id="gcodeCurrentLayer">0</span> / <span id="gcodeTotalLayers">0</span></div>
+                    <input type="range" class="layer-slider" id="gcodeLayerSlider" min="0" max="0" value="0">
+                    <div>Progress: <span id="gcodeProgress">0</span>%</div>
+                    <div>Speed: 
+                        <select id="playbackSpeed" style="width: 60px; padding: 2px;">
+                            <option value="0.25">0.25x</option>
+                            <option value="0.5">0.5x</option>
+                            <option value="1" selected>1x</option>
+                            <option value="2">2x</option>
+                            <option value="5">5x</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div id="statusLeft">Ready</div>
+                <div id="statusRight">No model loaded</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        class SlicerApp {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.currentModel = null;
+                this.currentMesh = null;
+                this.settings = this.getDefaultSettings();
+                this.gcodeData = null;
+                this.layers = [];
+                this.axesHelper = null;
+                this.buildPlate = null;
+                this.mouseX = 0;
+                this.mouseY = 0;
+                this.isMouseDown = false;
+                this.viewMode = 'solid';
+                this.gcodeViewer = null;
+                this.gcodeLines = [];
+                this.gcodeProgress = 0;
+                this.isPlaying = false;
+                this.playbackSpeed = 1;
+                
+                this.init();
+                this.setupEventListeners();
+                this.log('Application initialized', 'success');
+                
+                // Auto-load torus demo model on startup
+                setTimeout(() => {
+                    this.loadDemoModel('torus');
+                    this.log('Auto-loaded demo torus model', 'info');
+                }, 500);
+            }
+
+            init() {
+                this.setupThreeJS();
+                this.setupLighting();
+                this.setupBuildPlate();
+                this.setupAxes();
+                this.animate();
+            }
+
+            getDefaultSettings() {
+                return {
+                    layerHeight: 0.2,
+                    infillDensity: 20,
+                    printSpeed: 60,
+                    wallThickness: 1.2,
+                    topBottomLayers: 3,
+                    supportEnabled: false,
+                    supportDensity: 15,
+                    retraction: 4.5,
+                    travelSpeed: 120,
+                    nozzleTemp: 200,
+                    bedTemp: 60,
+                    fanSpeed: 100,
+                    infillPattern: 'grid',
+                    material: 'pla'
+                };
+            }
+
+            setupThreeJS() {
+                const container = document.getElementById('viewer3d');
+                
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x1a1a2e);
+
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    container.clientWidth / container.clientHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(50, 50, 50);
+                this.camera.lookAt(0, 0, 0);
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(this.renderer.domElement);
+
+                // Controls
+                this.setupMouseControls();
+
+                // Handle resize
+                window.addEventListener('resize', () => this.onWindowResize());
+            }
+
+            setupMouseControls() {
+                const canvas = this.renderer.domElement;
+
+                canvas.addEventListener('mousedown', (e) => {
+                    this.isMouseDown = true;
+                    this.mouseX = e.clientX;
+                    this.mouseY = e.clientY;
+                });
+
+                canvas.addEventListener('mousemove', (e) => {
+                    if (!this.isMouseDown) return;
+                    
+                    const deltaX = e.clientX - this.mouseX;
+                    const deltaY = e.clientY - this.mouseY;
+                    
+                    // Rotate camera around origin
+                    const spherical = new THREE.Spherical();
+                    spherical.setFromVector3(this.camera.position);
+                    spherical.theta -= deltaX * 0.01;
+                    spherical.phi += deltaY * 0.01;
+                    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                    
+                    this.camera.position.setFromSpherical(spherical);
+                    this.camera.lookAt(0, 0, 0);
+                    
+                    this.mouseX = e.clientX;
+                    this.mouseY = e.clientY;
+                });
+
+                document.addEventListener('mouseup', () => {
+                    this.isMouseDown = false;
+                });
+
+                canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const scale = e.deltaY > 0 ? 1.1 : 0.9;
+                    this.camera.position.multiplyScalar(scale);
+                    
+                    // Limit zoom
+                    const distance = this.camera.position.length();
+                    if (distance < 10) this.camera.position.normalize().multiplyScalar(10);
+                    if (distance > 200) this.camera.position.normalize().multiplyScalar(200);
+                });
+            }
+
+            setupLighting() {
+                // Ambient light
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                this.scene.add(ambientLight);
+
+                // Main directional light
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(50, 50, 50);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                directionalLight.shadow.camera.near = 0.5;
+                directionalLight.shadow.camera.far = 500;
+                directionalLight.shadow.camera.left = -50;
+                directionalLight.shadow.camera.right = 50;
+                directionalLight.shadow.camera.top = 50;
+                directionalLight.shadow.camera.bottom = -50;
+                this.scene.add(directionalLight);
+
+                // Fill light
+                const fillLight = new THREE.DirectionalLight(0x4facfe, 0.3);
+                fillLight.position.set(-50, 30, -50);
+                this.scene.add(fillLight);
+            }
+
+            setupBuildPlate() {
+                const plateGeometry = new THREE.PlaneGeometry(200, 200);
+                const plateMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0x333333,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                this.buildPlate = new THREE.Mesh(plateGeometry, plateMaterial);
+                this.buildPlate.rotation.x = -Math.PI / 2;
+                this.buildPlate.receiveShadow = true;
+                this.scene.add(this.buildPlate);
+
+                // Grid lines
+                const gridHelper = new THREE.GridHelper(200, 20, 0x666666, 0x444444);
+                this.scene.add(gridHelper);
+            }
+
+            setupAxes() {
+                this.axesHelper = new THREE.AxesHelper(20);
+                this.axesHelper.visible = false;
+                this.scene.add(this.axesHelper);
+            }
+
+            setupEventListeners() {
+                // File upload
+                const fileInput = document.getElementById('fileInput');
+                const fileUpload = document.getElementById('fileUpload');
+
+                fileUpload.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+
+                // Drag and drop
+                fileUpload.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    fileUpload.classList.add('dragover');
+                });
+
+                fileUpload.addEventListener('dragleave', () => {
+                    fileUpload.classList.remove('dragover');
+                });
+
+                fileUpload.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    fileUpload.classList.remove('dragover');
+                    this.handleFileUpload(e);
+                });
+
+                // Demo models
+                document.querySelectorAll('.demo-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.loadDemoModel(btn.dataset.shape));
+                });
+
+                // Preset buttons
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.selectPreset(btn.dataset.preset));
+                });
+
+                // Tab buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+                });
+
+                // Toolbar buttons
+                document.getElementById('viewSolid').addEventListener('click', () => this.setViewMode('solid'));
+                document.getElementById('viewWireframe').addEventListener('click', () => this.setViewMode('wireframe'));
+                document.getElementById('viewLayers').addEventListener('click', () => this.setViewMode('layers'));
+                document.getElementById('viewGcode').addEventListener('click', () => this.setViewMode('gcode'));
+                document.getElementById('viewSupports').addEventListener('click', () => this.setViewMode('supports'));
+                document.getElementById('resetView').addEventListener('click', () => this.resetView());
+                document.getElementById('fitView').addEventListener('click', () => this.fitToView());
+                document.getElementById('toggleAxes').addEventListener('click', () => this.toggleAxes());
+
+                // G-code viewer controls
+                document.getElementById('playGcode').addEventListener('click', () => this.playGcode());
+                document.getElementById('pauseGcode').addEventListener('click', () => this.pauseGcode());
+                document.getElementById('resetGcode').addEventListener('click', () => this.resetGcode());
+                
+                // Add event listener for G-code layer slider with error handling
+                const gcodeSlider = document.getElementById('gcodeLayerSlider');
+                if (gcodeSlider) {
+                    gcodeSlider.addEventListener('input', (e) => {
+                        const layerIndex = parseInt(e.target.value);
+                        this.showGcodeLayer(layerIndex);
+                    });
+                }
+                
+                // Add event listener for playback speed
+                const speedSelect = document.getElementById('playbackSpeed');
+                if (speedSelect) {
+                    speedSelect.addEventListener('change', (e) => {
+                        this.playbackSpeed = parseFloat(e.target.value);
+                        this.log(`Playback speed set to ${this.playbackSpeed}x`, 'info');
+                    });
+                }
+
+                // Action buttons
+                document.getElementById('sliceBtn').addEventListener('click', () => this.sliceModel());
+                document.getElementById('downloadBtn').addEventListener('click', () => this.downloadGcode());
+
+                // Material preset changes
+                document.getElementById('material').addEventListener('change', (e) => this.updateMaterialSettings(e.target.value));
+
+                // Settings changes
+                ['layerHeight', 'infillDensity', 'printSpeed'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => this.updateEstimates());
+                });
+            }
+
+            loadDemoModel(shape) {
+                this.log(`Loading demo model: ${shape}`, 'info');
+                
+                let geometry;
+                switch(shape) {
+                    case 'cube':
+                        geometry = new THREE.BoxGeometry(20, 20, 20);
+                        break;
+                    case 'sphere':
+                        geometry = new THREE.SphereGeometry(12, 32, 16);
+                        break;
+                    case 'cylinder':
+                        geometry = new THREE.CylinderGeometry(10, 10, 25, 32);
+                        break;
+                    case 'torus':
+                        geometry = new THREE.TorusGeometry(12, 4, 16, 100);
+                        break;
+                    default:
+                        return;
+                }
+
+                this.displayModel(geometry, `Demo ${shape}`);
+                this.updateFileInfo({ name: `demo_${shape}.stl`, size: 1024 });
+                document.getElementById('sliceBtn').disabled = false;
+                this.log(`Demo model loaded: ${shape}`, 'success');
+            }
+
+            handleFileUpload(event) {
+                const files = event.dataTransfer ? event.dataTransfer.files : event.target.files;
+                
+                for (let file of files) {
+                    if (this.isValidFile(file)) {
+                        this.loadFile(file);
+                    } else {
+                        this.showAlert(`Unsupported file type: ${file.name}`, 'error');
+                    }
+                }
+            }
+
+            isValidFile(file) {
+                const validExtensions = ['.stl', '.obj', '.3mf', '.gcode', '.g'];
+                return validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+            }
+
+            async loadFile(file) {
+                this.log(`Loading file: ${file.name}`, 'info');
+                
+                try {
+                    let geometry;
+                    
+                    if (file.name.toLowerCase().endsWith('.gcode') || file.name.toLowerCase().endsWith('.g')) {
+                        // Load G-code file directly
+                        const text = await file.text();
+                        this.loadGcodeFile(text, file.name);
+                        return;
+                    } else if (file.name.toLowerCase().endsWith('.stl')) {
+                        const buffer = await file.arrayBuffer();
+                        geometry = this.parseSTL(buffer);
+                    } else if (file.name.toLowerCase().endsWith('.obj')) {
+                        const text = await file.text();
+                        geometry = this.parseOBJ(text);
+                    } else {
+                        throw new Error('Unsupported file format');
+                    }
+                    
+                    if (geometry) {
+                        this.displayModel(geometry, file.name);
+                        this.updateFileInfo(file);
+                        document.getElementById('sliceBtn').disabled = false;
+                        this.log(`File loaded successfully: ${file.name}`, 'success');
+                    }
+                } catch (error) {
+                    this.log(`Error loading file: ${error.message}`, 'error');
+                    this.showAlert(`Failed to load ${file.name}: ${error.message}`, 'error');
+                }
+            }
+
+            loadGcodeFile(gcodeText, filename) {
+                this.log(`Loading G-code file: ${filename}`, 'info');
+                
+                // Store the G-code data
+                this.gcodeData = gcodeText;
+                
+                // Parse for visualization
+                this.parseGcodeForVisualization();
+                
+                // Update UI
+                this.updateFileInfo({ name: filename, size: gcodeText.length });
+                document.getElementById('sliceBtn').disabled = true; // No need to slice G-code
+                document.getElementById('downloadBtn').disabled = false; // Can download existing G-code
+                
+                // Automatically switch to G-code view
+                this.setViewMode('gcode');
+                
+                // Hide model info panel since we don't have a 3D model
+                document.getElementById('modelInfo').style.display = 'none';
+                
+                this.showAlert(`G-code file loaded successfully! 🎉\nFound ${this.gcodeLines.length} layers`, 'success');
+                this.log(`G-code file loaded: ${this.gcodeLines.length} layers parsed`, 'success');
+                
+                // Update status
+                document.getElementById('statusRight').textContent = `G-code loaded: ${filename}`;
+            }
+
+            parseSTL(buffer) {
+                const dataView = new DataView(buffer);
+                
+                // Check if it's binary STL
+                if (buffer.byteLength > 80) {
+                    // Read potential triangle count from binary header
+                    const triangleCount = dataView.getUint32(80, true);
+                    const expectedSize = 80 + 4 + (triangleCount * 50);
+                    
+                    // If size matches binary format, parse as binary
+                    if (Math.abs(buffer.byteLength - expectedSize) < 100) {
+                        return this.parseBinarySTL(dataView, triangleCount);
+                    }
+                }
+                
+                // Try parsing as ASCII STL
+                try {
+                    const text = new TextDecoder().decode(buffer);
+                    return this.parseASCIISTL(text);
+                } catch (error) {
+                    throw new Error('Invalid STL file format');
+                }
+            }
+
+            parseBinarySTL(dataView, triangleCount) {
+                this.log(`Parsing binary STL with ${triangleCount} triangles`, 'info');
+                
+                const vertices = [];
+                const normals = [];
+                
+                let offset = 84; // Skip 80-byte header + 4-byte triangle count
+                
+                for (let i = 0; i < triangleCount; i++) {
+                    try {
+                        // Read normal vector (3 floats)
+                        const nx = dataView.getFloat32(offset, true);
+                        const ny = dataView.getFloat32(offset + 4, true);
+                        const nz = dataView.getFloat32(offset + 8, true);
+                        offset += 12;
+                        
+                        // Read 3 vertices (9 floats total)
+                        for (let j = 0; j < 3; j++) {
+                            const x = dataView.getFloat32(offset, true);
+                            const y = dataView.getFloat32(offset + 4, true);
+                            const z = dataView.getFloat32(offset + 8, true);
+                            offset += 12;
+                            
+                            vertices.push(x, y, z);
+                            normals.push(nx, ny, nz);
+                        }
+                        
+                        // Skip attribute byte count (2 bytes)
+                        offset += 2;
+                        
+                    } catch (error) {
+                        this.log(`Error reading triangle ${i}: ${error.message}`, 'warning');
+                        break;
+                    }
+                }
+                
+                if (vertices.length === 0) {
+                    throw new Error('No valid triangles found in binary STL');
+                }
+                
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                
+                this.log(`Loaded ${vertices.length / 3} vertices from binary STL`, 'success');
+                return geometry;
+            }
+
+            parseASCIISTL(text) {
+                this.log('Parsing ASCII STL', 'info');
+                
+                const lines = text.split('\n');
+                const vertices = [];
+                const normals = [];
+                
+                let currentNormal = null;
+                let inFacet = false;
+                
+                for (let line of lines) {
+                    line = line.trim().toLowerCase();
+                    
+                    if (line.startsWith('facet normal')) {
+                        const parts = line.split(/\s+/);
+                        if (parts.length >= 5) {
+                            currentNormal = [
+                                parseFloat(parts[2]) || 0,
+                                parseFloat(parts[3]) || 0,
+                                parseFloat(parts[4]) || 0
+                            ];
+                            inFacet = true;
+                        }
+                    } else if (line.startsWith('vertex') && inFacet) {
+                        const parts = line.split(/\s+/);
+                        if (parts.length >= 4) {
+                            const x = parseFloat(parts[1]) || 0;
+                            const y = parseFloat(parts[2]) || 0;
+                            const z = parseFloat(parts[3]) || 0;
+                            
+                            vertices.push(x, y, z);
+                            if (currentNormal) {
+                                normals.push(...currentNormal);
+                            }
+                        }
+                    } else if (line.startsWith('endfacet')) {
+                        inFacet = false;
+                    }
+                }
+                
+                if (vertices.length === 0) {
+                    throw new Error('No valid geometry found in ASCII STL file');
+                }
+                
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                
+                if (normals.length === vertices.length) {
+                    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                } else {
+                    geometry.computeVertexNormals();
+                }
+                
+                this.log(`Loaded ${vertices.length / 3} vertices from ASCII STL`, 'success');
+                return geometry;
+            }
+
+            parseOBJ(text) {
+                // Simple OBJ parser
+                const lines = text.split('\n');
+                const vertices = [];
+                const faces = [];
+                
+                for (let line of lines) {
+                    line = line.trim();
+                    
+                    if (line.startsWith('v ')) {
+                        const parts = line.split(' ');
+                        vertices.push([
+                            parseFloat(parts[1]),
+                            parseFloat(parts[2]),
+                            parseFloat(parts[3])
+                        ]);
+                    } else if (line.startsWith('f ')) {
+                        const parts = line.split(' ');
+                        const face = [];
+                        for (let i = 1; i < parts.length; i++) {
+                            face.push(parseInt(parts[i].split('/')[0]) - 1);
+                        }
+                        faces.push(face);
+                    }
+                }
+                
+                if (vertices.length === 0 || faces.length === 0) {
+                    throw new Error('No valid geometry found in OBJ file');
+                }
+                
+                // Convert to BufferGeometry
+                const positions = [];
+                for (let face of faces) {
+                    if (face.length >= 3) {
+                        // Triangulate face
+                        for (let i = 1; i < face.length - 1; i++) {
+                            positions.push(...vertices[face[0]]);
+                            positions.push(...vertices[face[i]]);
+                            positions.push(...vertices[face[i + 1]]);
+                        }
+                    }
+                }
+                
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                geometry.computeVertexNormals();
+                
+                return geometry;
+            }
+
+            displayModel(geometry, filename) {
+                // Remove existing model
+                if (this.currentMesh) {
+                    this.scene.remove(this.currentMesh);
+                }
+                
+                // Create material based on view mode
+                const material = this.createMaterial();
+                
+                // Create mesh
+                this.currentMesh = new THREE.Mesh(geometry, material);
+                this.currentMesh.castShadow = true;
+                this.currentMesh.receiveShadow = true;
+                
+                // Center the model
+                geometry.computeBoundingBox();
+                const box = geometry.boundingBox;
+                const center = box.getCenter(new THREE.Vector3());
+                geometry.translate(-center.x, -center.y, -box.min.z);
+                
+                this.scene.add(this.currentMesh);
+                this.currentModel = { geometry, filename };
+                
+                // Update model info
+                this.updateModelInfo(geometry);
+                
+                // Fit to view
+                this.fitToView();
+                
+                // Update status
+                document.getElementById('statusRight').textContent = `Model loaded: ${filename}`;
+                document.getElementById('modelInfo').style.display = 'block';
+            }
+
+            createMaterial() {
+                switch(this.viewMode) {
+                    case 'wireframe':
+                        return new THREE.MeshBasicMaterial({ 
+                            color: 0x4facfe, 
+                            wireframe: true 
+                        });
+                    case 'layers':
+                        return new THREE.MeshLambertMaterial({ 
+                            color: 0x43e97b,
+                            transparent: true,
+                            opacity: 0.8
+                        });
+                    case 'supports':
+                        return new THREE.MeshLambertMaterial({ 
+                            color: 0xff6b6b,
+                            transparent: true,
+                            opacity: 0.7
+                        });
+                    default: // solid
+                        return new THREE.MeshLambertMaterial({ 
+                            color: 0x4facfe,
+                            side: THREE.DoubleSide
+                        });
+                }
+            }
+
+            updateModelInfo(geometry) {
+                const positions = geometry.attributes.position;
+                const vertexCount = positions.count;
+                const faceCount = vertexCount / 3;
+                
+                geometry.computeBoundingBox();
+                const box = geometry.boundingBox;
+                const size = box.getSize(new THREE.Vector3());
+                
+                // Calculate volume (approximation)
+                const volume = (size.x * size.y * size.z) / 1000; // cm³
+                
+                document.getElementById('vertexCount').textContent = vertexCount.toLocaleString();
+                document.getElementById('faceCount').textContent = Math.floor(faceCount).toLocaleString();
+                document.getElementById('modelSize').textContent = 
+                    `${size.x.toFixed(1)}×${size.y.toFixed(1)}×${size.z.toFixed(1)} mm`;
+                document.getElementById('modelVolume').textContent = volume.toFixed(2);
+                
+                this.updateEstimates();
+            }
+
+            updateEstimates() {
+                if (!this.currentModel) return;
+                
+                const layerHeight = parseFloat(document.getElementById('layerHeight').value);
+                const printSpeed = parseFloat(document.getElementById('printSpeed').value);
+                const infillDensity = parseFloat(document.getElementById('infillDensity').value);
+                
+                const geometry = this.currentModel.geometry;
+                geometry.computeBoundingBox();
+                const size = geometry.boundingBox.getSize(new THREE.Vector3());
+                
+                // Estimate print time (very simplified)
+                const layerCount = Math.ceil(size.z / layerHeight);
+                const timePerLayer = (size.x * size.y) / (printSpeed * 100); // minutes
+                const totalTime = layerCount * timePerLayer;
+                
+                // Estimate material usage
+                const volume = (size.x * size.y * size.z) / 1000; // cm³
+                const fillVolume = volume * (infillDensity / 100);
+                const materialWeight = fillVolume * 1.24; // PLA density
+                
+                document.getElementById('printTime').textContent = 
+                    totalTime > 60 ? `${(totalTime / 60).toFixed(1)}h` : `${totalTime.toFixed(0)}m`;
+                document.getElementById('materialUsage').textContent = `${materialWeight.toFixed(1)} g`;
+            }
+
+            updateFileInfo(file) {
+                const fileInfo = document.getElementById('fileInfo');
+                fileInfo.innerHTML = `
+                    <div class="alert alert-info">
+                        <strong>File:</strong> ${file.name}<br>
+                        <strong>Size:</strong> ${(file.size / 1024).toFixed(1)} KB
+                    </div>
+                `;
+            }
+
+            selectPreset(preset) {
+                // Update active preset button
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.preset === preset);
+                });
+                
+                const presets = {
+                    draft: { layerHeight: 0.3, infillDensity: 10, printSpeed: 80 },
+                    normal: { layerHeight: 0.2, infillDensity: 20, printSpeed: 60 },
+                    fine: { layerHeight: 0.1, infillDensity: 30, printSpeed: 40 },
+                    custom: {} // Keep current values
+                };
+                
+                const settings = presets[preset];
+                if (settings) {
+                    Object.keys(settings).forEach(key => {
+                        const element = document.getElementById(key);
+                        if (element) element.value = settings[key];
+                    });
+                    this.updateEstimates();
+                    this.log(`Applied ${preset} preset`, 'info');
+                }
+            }
+
+            switchTab(tabName) {
+                // Update active tab button
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === tabName);
+                });
+                
+                // Show/hide tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.toggle('active', content.id === tabName);
+                });
+            }
+
+            setViewMode(mode) {
+                this.viewMode = mode;
+                
+                // Update toolbar buttons
+                document.querySelectorAll('.toolbar-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                let activeButtonId;
+                switch(mode) {
+                    case 'solid':
+                        activeButtonId = 'viewSolid';
+                        break;
+                    case 'wireframe':
+                        activeButtonId = 'viewWireframe';
+                        break;
+                    case 'layers':
+                        activeButtonId = 'viewLayers';
+                        break;
+                    case 'gcode':
+                        activeButtonId = 'viewGcode';
+                        break;
+                    case 'supports':
+                        activeButtonId = 'viewSupports';
+                        break;
+                }
+                
+                if (activeButtonId) {
+                    document.getElementById(activeButtonId).classList.add('active');
+                }
+                
+                // Show/hide appropriate panels
+                document.getElementById('layerPreview').style.display = 
+                    (mode === 'layers') ? 'block' : 'none';
+                document.getElementById('gcodeViewer').style.display = 
+                    (mode === 'gcode') ? 'block' : 'none';
+                
+                // Update 3D view
+                if (mode === 'gcode') {
+                    this.showGcodeVisualization();
+                } else {
+                    this.hideGcodeVisualization();
+                    // Update material if model exists
+                    if (this.currentMesh) {
+                        this.currentMesh.material = this.createMaterial();
+                    }
+                }
+                
+                this.log(`View mode: ${mode}`, 'info');
+            }
+
+            resetView() {
+                this.camera.position.set(50, 50, 50);
+                this.camera.lookAt(0, 0, 0);
+            }
+
+            fitToView() {
+                if (!this.currentModel) return;
+                
+                const geometry = this.currentModel.geometry;
+                geometry.computeBoundingBox();
+                const box = geometry.boundingBox;
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                
+                const distance = maxDim * 2;
+                this.camera.position.normalize().multiplyScalar(distance);
+                this.camera.lookAt(0, 0, 0);
+            }
+
+            toggleAxes() {
+                this.axesHelper.visible = !this.axesHelper.visible;
+                document.getElementById('toggleAxes').classList.toggle('active', this.axesHelper.visible);
+            }
+
+            updateMaterialSettings(material) {
+                const materials = {
+                    pla: { nozzleTemp: 200, bedTemp: 60 },
+                    abs: { nozzleTemp: 240, bedTemp: 100 },
+                    petg: { nozzleTemp: 230, bedTemp: 80 },
+                    tpu: { nozzleTemp: 220, bedTemp: 40 }
+                };
+                
+                const settings = materials[material];
+                if (settings) {
+                    document.getElementById('nozzleTemp').value = settings.nozzleTemp;
+                    document.getElementById('bedTemp').value = settings.bedTemp;
+                }
+            }
+
+            async sliceModel() {
+                if (!this.currentModel) {
+                    this.showAlert('No model loaded', 'error');
+                    return;
+                }
+                
+                this.log('Starting slicing process...', 'info');
+                this.showProgress();
+                
+                try {
+                    // Simulate slicing process with proper async handling
+                    const steps = [
+                        'Analyzing geometry...',
+                        'Generating layers...',
+                        'Calculating toolpaths...',
+                        'Generating supports...',
+                        'Creating G-code...'
+                    ];
+                    
+                    for (let i = 0; i < steps.length; i++) {
+                        this.updateProgress((i / steps.length) * 100, steps[i]);
+                        this.log(steps[i], 'info');
+                        
+                        // Use setTimeout wrapped in Promise for proper async delay
+                        await new Promise(resolve => setTimeout(resolve, 600));
+                    }
+                    
+                    // Final progress update
+                    this.updateProgress(100, 'Finalizing...');
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // Generate G-code
+                    this.gcodeData = this.generateMockGcode();
+                    this.generateLayers();
+                    this.parseGcodeForVisualization();
+                    
+                    // Success state
+                    this.hideProgress();
+                    document.getElementById('downloadBtn').disabled = false;
+                    document.getElementById('layerPreview').style.display = 'block';
+                    this.setupLayerSlider();
+                    
+                    this.showAlert('Model sliced successfully! 🎉', 'success');
+                    this.log('Slicing completed successfully', 'success');
+                    
+                } catch (error) {
+                    this.hideProgress();
+                    this.log(`Slicing failed: ${error.message}`, 'error');
+                    this.showAlert('Slicing failed. Please try again.', 'error');
+                }
+            }
+
+            generateLayers() {
+                if (!this.currentModel) return;
+                
+                const layerHeight = parseFloat(document.getElementById('layerHeight').value);
+                const geometry = this.currentModel.geometry;
+                geometry.computeBoundingBox();
+                const size = geometry.boundingBox.getSize(new THREE.Vector3());
+                
+                const layerCount = Math.ceil(size.z / layerHeight);
+                this.layers = [];
+                
+                // Generate mock layer data
+                for (let i = 0; i < layerCount; i++) {
+                    this.layers.push({
+                        number: i + 1,
+                        height: (i + 1) * layerHeight,
+                        paths: this.generateLayerPaths(i, layerCount)
+                    });
+                }
+                
+                document.getElementById('totalLayers').textContent = layerCount;
+                document.getElementById('currentLayer').textContent = '1';
+            }
+
+            generateLayerPaths(layerIndex, totalLayers) {
+                // Generate some mock toolpaths for visualization
+                const paths = [];
+                const centerX = 0;
+                const centerY = 0;
+                const radius = 15 - (layerIndex / totalLayers) * 5; // Tapered shape
+                
+                // Outer perimeter
+                for (let angle = 0; angle < Math.PI * 2; angle += 0.1) {
+                    paths.push({
+                        x: centerX + Math.cos(angle) * radius,
+                        y: centerY + Math.sin(angle) * radius,
+                        type: 'perimeter'
+                    });
+                }
+                
+                // Infill lines
+                for (let x = -radius; x < radius; x += 2) {
+                    paths.push({
+                        x: centerX + x,
+                        y: centerY - radius * 0.8,
+                        type: 'infill'
+                    });
+                    paths.push({
+                        x: centerX + x,
+                        y: centerY + radius * 0.8,
+                        type: 'infill'
+                    });
+                }
+                
+                return paths;
+            }
+
+            setupLayerSlider() {
+                const slider = document.getElementById('layerSlider');
+                slider.max = this.layers.length - 1;
+                slider.value = 0;
+                
+                slider.oninput = (e) => {
+                    const layerIndex = parseInt(e.target.value);
+                    this.showLayer(layerIndex);
+                };
+                
+                // Show first layer
+                this.showLayer(0);
+            }
+
+            showLayer(layerIndex) {
+                if (!this.layers[layerIndex]) return;
+                
+                const layer = this.layers[layerIndex];
+                document.getElementById('currentLayer').textContent = layer.number;
+                document.getElementById('layerHeight').textContent = layer.height.toFixed(2);
+                
+                // In a real implementation, this would visualize the actual layer
+                this.log(`Viewing layer ${layer.number} at height ${layer.height.toFixed(2)}mm`, 'info');
+            }
+
+            generateMockGcode() {
+                const layerHeight = parseFloat(document.getElementById('layerHeight').value);
+                const nozzleTemp = parseFloat(document.getElementById('nozzleTemp').value);
+                const bedTemp = parseFloat(document.getElementById('bedTemp').value);
+                const printSpeed = parseFloat(document.getElementById('printSpeed').value) * 60; // mm/min
+                
+                let gcode = `;Generated by 3D Slicer Pro
+;Layer height: ${layerHeight}mm
+;Nozzle temperature: ${nozzleTemp}°C
+;Bed temperature: ${bedTemp}°C
+;Print speed: ${printSpeed} mm/min
+
+; Start G-code
+G28 ; Home all axes
+M190 S${bedTemp} ; Set bed temperature and wait
+M109 S${nozzleTemp} ; Set nozzle temperature and wait
+G92 E0 ; Reset extruder position
+G1 F${printSpeed} ; Set feedrate
+
+`;
+
+                // Generate layers based on current model
+                if (this.currentModel) {
+                    const geometry = this.currentModel.geometry;
+                    geometry.computeBoundingBox();
+                    const size = geometry.boundingBox.getSize(new THREE.Vector3());
+                    const layerCount = Math.ceil(size.z / layerHeight);
+                    
+                    for (let layer = 0; layer < layerCount; layer++) {
+                        const z = layer * layerHeight;
+                        gcode += `\n; Layer ${layer + 1} at Z=${z.toFixed(2)}mm\n`;
+                        gcode += `G1 Z${z.toFixed(2)} F300\n`;
+                        
+                        // Generate perimeter
+                        const radius = Math.max(5, 20 - (layer / layerCount) * 10);
+                        const centerX = 0;
+                        const centerY = 0;
+                        
+                        // Outer perimeter
+                        for (let angle = 0; angle <= Math.PI * 2; angle += 0.3) {
+                            const x = centerX + Math.cos(angle) * radius;
+                            const y = centerY + Math.sin(angle) * radius;
+                            const e = (layer * 50) + (angle / (Math.PI * 2)) * 25;
+                            
+                            if (angle === 0) {
+                                gcode += `G1 X${x.toFixed(2)} Y${y.toFixed(2)} F3000\n`;
+                            } else {
+                                gcode += `G1 X${x.toFixed(2)} Y${y.toFixed(2)} E${e.toFixed(2)}\n`;
+                            }
+                        }
+                        
+                        // Inner infill
+                        const infillDensity = parseFloat(document.getElementById('infillDensity').value);
+                        if (infillDensity > 0) {
+                            const spacing = 5 - (infillDensity / 100) * 3;
+                            for (let x = -radius + spacing; x < radius; x += spacing) {
+                                const y1 = centerY - Math.sqrt(Math.max(0, radius * radius - x * x));
+                                const y2 = centerY + Math.sqrt(Math.max(0, radius * radius - x * x));
+                                const e1 = (layer * 50) + 25 + (x + radius) * 2;
+                                const e2 = e1 + Math.abs(y2 - y1) * 0.1;
+                                
+                                gcode += `G1 X${(centerX + x).toFixed(2)} Y${y1.toFixed(2)} F3000\n`;
+                                gcode += `G1 X${(centerX + x).toFixed(2)} Y${y2.toFixed(2)} E${e2.toFixed(2)}\n`;
+                            }
+                        }
+                    }
+                }
+                
+                gcode += `
+; End G-code
+G1 E-5 F300 ; Retract
+G28 X0 Y0 ; Home X and Y
+M104 S0 ; Turn off nozzle
+M140 S0 ; Turn off bed
+M84 ; Disable motors
+`;
+                
+                return gcode;
+            }
+
+            parseGcodeForVisualization() {
+                if (!this.gcodeData) {
+                    this.log('No G-code data to parse', 'warning');
+                    return;
+                }
+                
+                this.log('Starting G-code parsing for visualization...', 'info');
+                this.gcodeLines = [];
+                const lines = this.gcodeData.split('\n');
+                let currentPos = { x: 0, y: 0, z: 0, e: 0 };
+                let currentLayer = 0;
+                let layerPaths = [];
+                let totalMoves = 0;
+                
+                for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+                    let line = lines[lineNum].trim();
+                    if (line.startsWith(';') || line === '') continue;
+                    
+                    // Parse G1 moves
+                    if (line.startsWith('G1')) {
+                        const newPos = { ...currentPos };
+                        let hasMove = false;
+                        let hasExtrusion = false;
+                        
+                        // Parse coordinates
+                        const xMatch = line.match(/X([-\d.]+)/i);
+                        const yMatch = line.match(/Y([-\d.]+)/i);
+                        const zMatch = line.match(/Z([-\d.]+)/i);
+                        const eMatch = line.match(/E([-\d.]+)/i);
+                        
+                        if (xMatch) { 
+                            newPos.x = parseFloat(xMatch[1]); 
+                            hasMove = true; 
+                        }
+                        if (yMatch) { 
+                            newPos.y = parseFloat(yMatch[1]); 
+                            hasMove = true; 
+                        }
+                        if (zMatch) { 
+                            const newZ = parseFloat(zMatch[1]);
+                            if (newZ > currentPos.z + 0.01) { // Layer change detected
+                                if (layerPaths.length > 0) {
+                                    this.gcodeLines.push({
+                                        layer: currentLayer,
+                                        paths: [...layerPaths],
+                                        z: currentPos.z
+                                    });
+                                    this.log(`Layer ${currentLayer} completed with ${layerPaths.length} paths`, 'info');
+                                }
+                                currentLayer++;
+                                layerPaths = [];
+                            }
+                            newPos.z = newZ;
+                        }
+                        if (eMatch) { 
+                            const newE = parseFloat(eMatch[1]);
+                            hasExtrusion = newE > currentPos.e;
+                            newPos.e = newE;
+                        }
+                        
+                        // Add path if there's XY movement
+                        if (hasMove && (Math.abs(newPos.x - currentPos.x) > 0.01 || Math.abs(newPos.y - currentPos.y) > 0.01)) {
+                            const pathType = hasExtrusion ? 'extrude' : 'travel';
+                            layerPaths.push({
+                                from: { ...currentPos },
+                                to: { ...newPos },
+                                type: pathType
+                            });
+                            totalMoves++;
+                        }
+                        
+                        currentPos = newPos;
+                    }
+                }
+                
+                // Add final layer
+                if (layerPaths.length > 0) {
+                    this.gcodeLines.push({
+                        layer: currentLayer,
+                        paths: layerPaths,
+                        z: currentPos.z
+                    });
+                    this.log(`Final layer ${currentLayer} completed with ${layerPaths.length} paths`, 'info');
+                }
+                
+                this.log(`G-code parsing completed: ${this.gcodeLines.length} layers, ${totalMoves} total moves`, 'success');
+                this.setupGcodeViewer();
+            }
+
+            setupGcodeViewer() {
+                this.log('Setting up G-code viewer controls...', 'info');
+                
+                const slider = document.getElementById('gcodeLayerSlider');
+                const totalLayers = this.gcodeLines.length;
+                
+                if (slider) {
+                    slider.max = Math.max(0, totalLayers - 1);
+                    slider.value = 0;
+                    this.log(`G-code slider configured: 0 to ${slider.max}`, 'info');
+                }
+                
+                // Update UI elements
+                const totalLayersSpan = document.getElementById('gcodeTotalLayers');
+                const currentLayerSpan = document.getElementById('gcodeCurrentLayer');
+                const progressSpan = document.getElementById('gcodeProgress');
+                
+                if (totalLayersSpan) totalLayersSpan.textContent = totalLayers;
+                if (currentLayerSpan) currentLayerSpan.textContent = totalLayers > 0 ? '1' : '0';
+                if (progressSpan) progressSpan.textContent = '0';
+                
+                this.log(`G-code viewer setup complete: ${totalLayers} layers ready`, 'success');
+            }
+
+            showGcodeVisualization() {
+                this.log('Attempting to show G-code visualization...', 'info');
+                
+                if (!this.gcodeLines || this.gcodeLines.length === 0) {
+                    this.log('No G-code data available for visualization', 'warning');
+                    this.showAlert('No G-code data available. Please slice the model first.', 'error');
+                    return;
+                }
+                
+                // Hide original model
+                if (this.currentMesh) {
+                    this.currentMesh.visible = false;
+                    this.log('Hidden original model mesh', 'info');
+                }
+                
+                // Create G-code visualization
+                this.createGcodeVisualization();
+                this.log(`G-code visualization activated with ${this.gcodeLines.length} layers`, 'success');
+            }
+
+            hideGcodeVisualization() {
+                this.log('Hiding G-code visualization...', 'info');
+                
+                // Show original model
+                if (this.currentMesh) {
+                    this.currentMesh.visible = true;
+                    this.log('Restored original model mesh', 'info');
+                }
+                
+                // Remove G-code visualization
+                if (this.gcodeViewer) {
+                    this.scene.remove(this.gcodeViewer);
+                    this.gcodeViewer = null;
+                    this.log('Removed G-code viewer from scene', 'info');
+                }
+            }
+
+            createGcodeVisualization() {
+                this.log('Creating G-code visualization...', 'info');
+                
+                if (this.gcodeViewer) {
+                    this.scene.remove(this.gcodeViewer);
+                }
+                
+                this.gcodeViewer = new THREE.Group();
+                let totalPaths = 0;
+                
+                // Create visualization for all layers
+                this.gcodeLines.forEach((layerData, layerIndex) => {
+                    const layerGroup = new THREE.Group();
+                    layerGroup.userData.layerIndex = layerIndex;
+                    layerGroup.name = `Layer_${layerIndex}`;
+                    
+                    // Create paths for this layer
+                    layerData.paths.forEach(path => {
+                        const geometry = new THREE.BufferGeometry();
+                        const positions = [
+                            path.from.x, path.from.y, path.from.z,
+                            path.to.x, path.to.y, path.to.z
+                        ];
+                        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                        
+                        const material = new THREE.LineBasicMaterial({
+                            color: path.type === 'extrude' ? 0x00ff00 : 0xff6666,
+                            linewidth: path.type === 'extrude' ? 2 : 1,
+                            transparent: true,
+                            opacity: path.type === 'extrude' ? 1.0 : 0.5
+                        });
+                        
+                        const line = new THREE.Line(geometry, material);
+                        layerGroup.add(line);
+                        totalPaths++;
+                    });
+                    
+                    // Initially hide all layers except first
+                    layerGroup.visible = layerIndex === 0;
+                    this.gcodeViewer.add(layerGroup);
+                });
+                
+                this.scene.add(this.gcodeViewer);
+                this.log(`Created ${totalPaths} toolpath lines across ${this.gcodeLines.length} layers`, 'success');
+                
+                // Show first layer
+                this.showGcodeLayer(0);
+            }
+
+            showGcodeLayer(layerIndex) {
+                if (!this.gcodeViewer || !this.gcodeLines || layerIndex >= this.gcodeLines.length) {
+                    this.log(`Cannot show layer ${layerIndex}: invalid index or no viewer`, 'warning');
+                    return;
+                }
+                
+                // Hide all layers first
+                this.gcodeViewer.children.forEach(child => {
+                    child.visible = false;
+                });
+                
+                // Show layers up to and including selected index
+                for (let i = 0; i <= layerIndex; i++) {
+                    if (this.gcodeViewer.children[i]) {
+                        this.gcodeViewer.children[i].visible = true;
+                    }
+                }
+                
+                // Update UI elements safely
+                const currentLayerSpan = document.getElementById('gcodeCurrentLayer');
+                const progressSpan = document.getElementById('gcodeProgress');
+                
+                if (currentLayerSpan) {
+                    currentLayerSpan.textContent = layerIndex + 1;
+                }
+                
+                if (progressSpan) {
+                    const progress = ((layerIndex + 1) / this.gcodeLines.length * 100).toFixed(1);
+                    progressSpan.textContent = progress;
+                }
+                
+                this.log(`Viewing G-code layers 1-${layerIndex + 1} (${((layerIndex + 1) / this.gcodeLines.length * 100).toFixed(1)}%)`, 'info');
+            }
+
+            playGcode() {
+                if (!this.gcodeLines || this.gcodeLines.length === 0) {
+                    this.showAlert('No G-code data available for playback', 'error');
+                    return;
+                }
+                
+                this.isPlaying = true;
+                const playBtn = document.getElementById('playGcode');
+                if (playBtn) {
+                    playBtn.style.opacity = '0.5';
+                    playBtn.textContent = '⏸️ Playing...';
+                }
+                
+                this.log(`Starting G-code playback at ${this.playbackSpeed}x speed`, 'info');
+                
+                const animate = () => {
+                    if (!this.isPlaying) return;
+                    
+                    const slider = document.getElementById('gcodeLayerSlider');
+                    if (!slider) return;
+                    
+                    let currentLayer = parseInt(slider.value);
+                    
+                    if (currentLayer < this.gcodeLines.length - 1) {
+                        currentLayer++;
+                        slider.value = currentLayer;
+                        this.showGcodeLayer(currentLayer);
+                        
+                        setTimeout(animate, Math.max(100, 1000 / this.playbackSpeed));
+                    } else {
+                        this.isPlaying = false;
+                        if (playBtn) {
+                            playBtn.style.opacity = '1';
+                            playBtn.textContent = '▶️ Play';
+                        }
+                        this.log('G-code playback completed', 'success');
+                    }
+                };
+                
+                setTimeout(animate, Math.max(100, 1000 / this.playbackSpeed));
+            }
+
+            pauseGcode() {
+                this.isPlaying = false;
+                const playBtn = document.getElementById('playGcode');
+                if (playBtn) {
+                    playBtn.style.opacity = '1';
+                    playBtn.textContent = '▶️ Play';
+                }
+                this.log('G-code playback paused', 'info');
+            }
+
+            resetGcode() {
+                this.isPlaying = false;
+                const playBtn = document.getElementById('playGcode');
+                const slider = document.getElementById('gcodeLayerSlider');
+                
+                if (playBtn) {
+                    playBtn.style.opacity = '1';
+                    playBtn.textContent = '▶️ Play';
+                }
+                
+                if (slider) {
+                    slider.value = 0;
+                    this.showGcodeLayer(0);
+                }
+                
+                this.log('G-code playback reset to layer 1', 'info');
+            }
+
+            downloadGcode() {
+                if (!this.gcodeData) {
+                    this.showAlert('No G-code available. Please slice the model first or load a G-code file.', 'error');
+                    return;
+                }
+                
+                // Determine filename
+                let filename;
+                if (this.currentModel && this.currentModel.filename) {
+                    filename = this.currentModel.filename.replace(/\.[^/.]+$/, "") + '.gcode';
+                } else {
+                    filename = 'sliced_model.gcode';
+                }
+                
+                const blob = new Blob([this.gcodeData], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                
+                URL.revokeObjectURL(url);
+                this.log(`G-code downloaded: ${filename}`, 'success');
+            }
+
+            showProgress() {
+                const progressContainer = document.getElementById('progressContainer');
+                const sliceBtn = document.getElementById('sliceBtn');
+                
+                progressContainer.style.display = 'block';
+                sliceBtn.disabled = true;
+                sliceBtn.textContent = '⏳ Slicing...';
+                
+                // Reset progress bar
+                this.updateProgress(0, 'Initializing...');
+            }
+
+            hideProgress() {
+                const progressContainer = document.getElementById('progressContainer');
+                const sliceBtn = document.getElementById('sliceBtn');
+                
+                progressContainer.style.display = 'none';
+                sliceBtn.disabled = false;
+                sliceBtn.textContent = '🚀 Slice Model';
+            }
+
+            updateProgress(percent, text) {
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                
+                if (progressFill && progressText) {
+                    progressFill.style.width = Math.min(percent, 100) + '%';
+                    progressText.textContent = text || `${Math.round(percent)}%`;
+                }
+            }
+
+            showAlert(message, type) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type}`;
+                alertDiv.textContent = message;
+                
+                const fileInfo = document.getElementById('fileInfo');
+                fileInfo.appendChild(alertDiv);
+                
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 5000);
+            }
+
+            log(message, type = 'info') {
+                const logArea = document.getElementById('logArea');
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                
+                logArea.appendChild(logEntry);
+                logArea.scrollTop = logArea.scrollHeight;
+                
+                // Update status
+                document.getElementById('statusLeft').textContent = message;
+            }
+
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            onWindowResize() {
+                const container = document.getElementById('viewer3d');
+                if (container && this.camera && this.renderer) {
+                    this.camera.aspect = container.clientWidth / container.clientHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                // Rotate model slightly if no user interaction
+                if (this.currentMesh && !this.isMouseDown) {
+                    this.currentMesh.rotation.z += 0.002;
+                }
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize the application
+        const app = new SlicerApp();
+    </script>
